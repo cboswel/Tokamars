@@ -1,0 +1,203 @@
+#define DEADSPOT 20                                    //range around neutral point to count as the neutral point, so imperfectly callibrated joysticks dont cause the Rover to move
+#define NEUTRALPOINT 256                               // Value returned from the receiver when the stick is in the neutral position
+
+/*************************************
+IN1 IN2 PWM STBY OUT1 OUT2 Mode
+H   H   H/L H    L    L    Short brake
+L   H   H   H    L    H    CCW
+L   H   L   H    L    L    Short brake
+H   L   H   H    H    L    CW
+H   L   L   H    L    L    Short brake
+L   L   H   H    OFF       Stop
+H/L H/L H/L L    OFF       Standby
+**************************************/
+
+// Front Left
+int FR_PWM = 3;
+int FR_IN1 = 4;
+int FR_IN2 = 2;
+
+// Front Right
+int FL_PWM = 5;
+int FL_IN1 = 7;
+int FL_IN2 = 8;
+
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(FR_PWM, OUTPUT);
+  pinMode(FR_IN1, OUTPUT);
+  pinMode(FR_IN2, OUTPUT);
+ 
+  pinMode(FL_PWM, OUTPUT);
+  pinMode(FL_IN1, OUTPUT);
+  pinMode(FL_IN2, OUTPUT);
+}
+
+
+void move(int y, int x) {
+// function to set motors according to joystick state
+
+
+// if both sticks are within the DEADSPOT (the neutral position in the centre):
+  if (NEUTRALPOINT - (DEADSPOT / 2) <= y <= NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x <= NEUTRALPOINT + (DEADSPOT / 2)) {
+
+// both motors stop.
+      digitalWrite(FR_IN1, HIGH);
+      digitalWrite(FR_IN2, HIGH);
+      analogWrite(FR_PWM, 0);
+      
+      digitalWrite(FL_IN1, HIGH);
+      digitalWrite(FL_IN2, HIGH);
+      analogWrite(FL_PWM, 0);
+      return 0;
+  }
+  
+
+// if left stick is within DEADSPOT but right stick is turning left:
+  if (NEUTRALPOINT - (DEADSPOT / 2) <= y <= NEUTRALPOINT + (DEADSPOT / 2) && x < NEUTRALPOINT - (DEADSPOT / 2)) {
+
+// turn left on the spot: right goes forwards and left goes backwards, speed of x
+      int speed = (NEUTRALPOINT - x);
+      digitalWrite(FR_IN1, HIGH);
+      digitalWrite(FR_IN2, LOW);
+      analogWrite(FR_PWM, speed);
+      
+      digitalWrite(FL_IN1, LOW);
+      digitalWrite(FL_IN2, HIGH);
+      analogWrite(FL_PWM, speed);   
+      return 0;
+  }
+
+
+// if left stick is within DEADSPOT but right stick is turning right:
+  if (NEUTRALPOINT - (DEADSPOT / 2) <= y <= NEUTRALPOINT + (DEADSPOT / 2) && (x > NEUTRALPOINT + (DEADSPOT / 2)) {
+// turn right on the spot: left goes forwards and right goes backwards, speed of x
+      int speed = (x - NEUTRALPOINT);
+      digitalWrite(FR_IN1, LOW);
+      digitalWrite(FR_IN2, HIGH);
+      analogWrite(FR_PWM, speed);
+      
+      digitalWrite(FL_IN1, HIGH);
+      digitalWrite(FL_IN2, LOW);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+
+
+// if left stick is forwards and right stick is within DEADSPOT:
+  if (y > NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x <= NEUTRALPOINT + (DEADSPOT / 2)) {
+// Go dead straight with both motors
+      int speed = (y - NEUTRALPOINT);
+      digitalWrite(FR_IN1, HIGH);
+      digitalWrite(FR_IN2, LOW);
+      analogWrite(FR_PWM, speed);
+      
+      digitalWrite(FL_IN1, HIGH);
+      digitalWrite(FL_IN2, LOW);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+ 
+
+// if left stick is forwards and right stick is turning left:
+  if (y > NEUTRALPOINT + (DEADSPOT / 2) && (x < NEUTRALPOINT - (DEADSPOT / 2)) {
+// Go forwards, arcing left
+// To arc left, right wheel goes at max speed and left wheel goes at a percentage of max speed depending on how hard the turn is 
+      int speed = (y - NEUTRALPOINT);
+      float scalar = (x / NEUTRALPOINT);
+
+      digitalWrite(FR_IN1, HIGH);
+      digitalWrite(FR_IN2, LOW);
+      analogWrite(FR_PWM, speed);
+      
+      speed = (speed * scalar);
+      digitalWrite(FL_IN1, HIGH);
+      digitalWrite(FL_IN2, LOW);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+
+
+// if left stick is forwards and right stick is turning right:
+  if (y > NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (x > NEUTRALPOINT + (DEADSPOT / 2) {
+// Go forwards, arcing right
+// To arc right, left wheel goes at max speed and right wheel goes at a percentage of max speed depending on how hard the turn is 
+      int speed = (y - NEUTRALPOINT);
+      float scalar = (1 - ((x - NEUTRALPOINT) / NEUTRALPOINT));
+      speed = (speed * scalar);
+
+      digitalWrite(FR_IN1, HIGH);
+      digitalWrite(FR_IN2, LOW);
+      analogWrite(FR_PWM, speed);
+      
+      speed = (y - NEUTRALPOINT);
+      digitalWrite(FL_IN1, HIGH);
+      digitalWrite(FL_IN2, LOW);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+
+
+// if left stick is reverse and right stick is within DEADSPOT:
+  if (y < NEUTRALPOINT - (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x <= NEUTRALPOINT + (DEADSPOT / 2)) {
+// Reverse dead straight with both motors
+      int speed = (NEUTRALPOINT - y)
+      digitalWrite(FR_IN1, LOW);
+      digitalWrite(FR_IN2, HIGH);
+      analogWrite(FR_PWM, speed);
+      
+      digitalWrite(FL_IN1, LOW);
+      digitalWrite(FL_IN2, HIGH);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+
+
+// if left stick is reverse and right stick is turning left:
+  if (y < NEUTRALPOINT - (DEADSPOT / 2) && (x < NEUTRALPOINT - (DEADSPOT / 2)) {
+// Reverse while arcing left
+// To arc left, right wheel goes at max speed and left wheel goes at a percentage of max speed depending on how hard the turn is 
+      int speed = (y - NEUTRALPOINT);
+      float scalar = (x / NEUTRALPOINT);
+
+      digitalWrite(FR_IN1, LOW);
+      digitalWrite(FR_IN2, HIGH);
+      analogWrite(FR_PWM, speed);
+      
+      speed = (speed * scalar);
+      digitalWrite(FL_IN1, LOW);
+      digitalWrite(FL_IN2, HIGH);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+
+
+// if left stick is reverse and right stick is turning right:
+  if (y < NEUTRALPOINT - (DEADSPOT / 2) && (x > NEUTRALPOINT + (DEADSPOT / 2) {
+// Reverse while arcing right
+// To arc right, left wheel goes at max speed and right wheel goes at a percentage of max speed depending on how hard the turn is 
+      int speed = (y - NEUTRALPOINT);
+      float scalar = (1 - ((x - NEUTRALPOINT) / NEUTRALPOINT));
+      speed = (speed * scalar);
+
+      digitalWrite(FR_IN1, LOW);
+      digitalWrite(FR_IN2, HIGH);
+      analogWrite(FR_PWM, speed);
+      
+      speed = (y - NEUTRALPOINT);
+      digitalWrite(FL_IN1, LOW);
+      digitalWrite(FL_IN2, HIGH);
+      analogWrite(FL_PWM, speed);
+      return 0;
+  }
+}
+
+
+
+void loop() {
+  // put your main code here, to run repeatedly:
+
+// *** insert function to calculate x and y values from receiver signals here***  
+  move(y, x)
+}
