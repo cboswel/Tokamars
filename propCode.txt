@@ -1,5 +1,5 @@
-#define DEADSPOT 20                                    //range around neutral point to count as the neutral point, so imperfectly callibrated joysticks dont cause the Rover to move
-#define NEUTRALPOINT 256                               // Value returned from the receiver when the stick is in the neutral position
+#define DEADSPOT 10                                    //range around neutral point to count as the neutral point, so imperfectly callibrated joysticks dont cause the Rover to move
+#define NEUTRALPOINT 50                               // Value returned from the receiver when the stick is in the neutral position
 
 /*************************************
 IN1 IN2 PWM STBY OUT1 OUT2 Mode
@@ -32,93 +32,117 @@ void setup() {
   pinMode(FL_PWM, OUTPUT);
   pinMode(FL_IN1, OUTPUT);
   pinMode(FL_IN2, OUTPUT);
-  Serial.begin(9600);
-  Serial.println("How about this?");
+
+  pinMode(BR_PWM, OUTPUT);
+  pinMode(BR_IN1, OUTPUT);
+  pinMode(BR_IN2, OUTPUT);
+
+  pinMode(BL_PWM, OUTPUT);
+  pinMode(BL_IN1, OUTPUT);
+  pinMode(BL_IN2, OUTPUT);
 }
 
 
-void move(int y, int x) {
+int move(int y, int x) {
 // function to set motors according to joystick state
 
 
 // if both sticks are within the DEADSPOT (the neutral position in the centre):
-  if (NEUTRALPOINT - (DEADSPOT / 2) <= y <= NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x <= NEUTRALPOINT + (DEADSPOT / 2))) {
+  if (NEUTRALPOINT - (DEADSPOT / 2) <= y && y <= NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x && x <= NEUTRALPOINT + (DEADSPOT / 2))) {
 
 // both motors stop.
       digitalWrite(FR_IN1, HIGH);
       digitalWrite(FR_IN2, HIGH);
       analogWrite(FR_PWM, 0);
 
-      Serial.print("\n Right Stop \t");
-      
       digitalWrite(FL_IN1, HIGH);
       digitalWrite(FL_IN2, HIGH);
       analogWrite(FL_PWM, 0);
 
-      Serial.print("\n Left stop \t");
+      digitalWrite(BR_IN1, HIGH);
+      digitalWrite(BR_IN2, HIGH);
+      analogWrite(BR_PWM, 0);
+
+      digitalWrite(BL_IN1, HIGH);
+      digitalWrite(BL_IN2, HIGH);
+      analogWrite(BL_PWM, 0);
+
       return 0;
   }
   
 
 // if left stick is within DEADSPOT but right stick is turning left:
-  if (NEUTRALPOINT - (DEADSPOT / 2) <= y <= NEUTRALPOINT + (DEADSPOT / 2) && x < NEUTRALPOINT - (DEADSPOT / 2)) {
+  if (NEUTRALPOINT - (DEADSPOT / 2) <= y && y <= NEUTRALPOINT + (DEADSPOT / 2) && x < NEUTRALPOINT - (DEADSPOT / 2)) {
 
 // turn left on the spot: right goes forwards and left goes backwards, speed of x
-      int speed = (NEUTRALPOINT - x);
+      float position = (NEUTRALPOINT - x);
+      int speed = (position * 255.0) / NEUTRALPOINT;
       digitalWrite(FR_IN1, HIGH);
       digitalWrite(FR_IN2, LOW);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right forwards \t");
-      Serial.print(speed);
-      
       digitalWrite(FL_IN1, LOW);
       digitalWrite(FL_IN2, HIGH);
       analogWrite(FL_PWM, speed); 
 
-      Serial.print("\n Left reverse \t");
-      Serial.print(speed);
+      digitalWrite(BR_IN1, HIGH);
+      digitalWrite(BR_IN2, LOW);
+      analogWrite(BR_PWM, speed);
+
+      digitalWrite(BL_IN1, LOW);
+      digitalWrite(BL_IN2, HIGH);
+      analogWrite(BL_PWM, speed); 
+
       return 0;
   }
 
 
 // if left stick is within DEADSPOT but right stick is turning right:
-  if (NEUTRALPOINT - (DEADSPOT / 2) <= y <= NEUTRALPOINT + (DEADSPOT / 2) && (x > NEUTRALPOINT + (DEADSPOT / 2))) {
+  if (NEUTRALPOINT - (DEADSPOT / 2) <= y && y <= NEUTRALPOINT + (DEADSPOT / 2) && (x > NEUTRALPOINT + (DEADSPOT / 2))) {
 // turn right on the spot: left goes forwards and right goes backwards, speed of x
-      int speed = (x - NEUTRALPOINT);
+      float position = (x - NEUTRALPOINT);
+      int speed = (position * 255.0) / NEUTRALPOINT;
       digitalWrite(FR_IN1, LOW);
       digitalWrite(FR_IN2, HIGH);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right reverse \t");
-      Serial.print(speed);
-      
       digitalWrite(FL_IN1, HIGH);
       digitalWrite(FL_IN2, LOW);
       analogWrite(FL_PWM, speed);
 
-      Serial.print("\n Left forwards \t");
-      Serial.print(speed);
+      digitalWrite(BR_IN1, LOW);
+      digitalWrite(BR_IN2, HIGH);
+      analogWrite(BR_PWM, speed);
+
+      digitalWrite(BL_IN1, HIGH);
+      digitalWrite(BL_IN2, LOW);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
 
 
 // if left stick is forwards and right stick is within DEADSPOT:
-  if (y > NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x <= NEUTRALPOINT + (DEADSPOT / 2))) {
+  if (y > NEUTRALPOINT + (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x && x <= NEUTRALPOINT + (DEADSPOT / 2))) {
 // Go dead straight with both motors
-      int speed = (y - NEUTRALPOINT);
+      float position = (y - NEUTRALPOINT);
+      int speed = (position * 255.0) / NEUTRALPOINT;
       digitalWrite(FR_IN1, HIGH);
       digitalWrite(FR_IN2, LOW);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right forwards \t");
-      Serial.print(speed);
-      
       digitalWrite(FL_IN1, HIGH);
       digitalWrite(FL_IN2, LOW);
       analogWrite(FL_PWM, speed);
-      Serial.print("\n Left forwards \t");
-      Serial.print(speed);
+
+      digitalWrite(BR_IN1, HIGH);
+      digitalWrite(BR_IN2, LOW);
+      analogWrite(BR_PWM, speed);
+
+      digitalWrite(BL_IN1, HIGH);
+      digitalWrite(BL_IN2, LOW);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
  
@@ -127,23 +151,28 @@ void move(int y, int x) {
   if (y > NEUTRALPOINT + (DEADSPOT / 2) && (x < NEUTRALPOINT - (DEADSPOT / 2))) {
 // Go forwards, arcing left
 // To arc left, right wheel goes at max speed and left wheel goes at a percentage of max speed depending on how hard the turn is 
-      int speed = (y - NEUTRALPOINT);
-      float scalar = (x / NEUTRALPOINT);
+      float position = (y - NEUTRALPOINT);
+      int speed = (position * 255.0) / NEUTRALPOINT;
+      float np = NEUTRALPOINT;
+      float scalar = (x / np);
 
       digitalWrite(FR_IN1, HIGH);
       digitalWrite(FR_IN2, LOW);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right forwards \t");
-      Serial.print(speed);
-      
+      digitalWrite(BR_IN1, HIGH);
+      digitalWrite(BR_IN2, LOW);
+      analogWrite(BR_PWM, speed);
+
       speed = (speed * scalar);
       digitalWrite(FL_IN1, HIGH);
       digitalWrite(FL_IN2, LOW);
       analogWrite(FL_PWM, speed);
 
-      Serial.print("\n Left forwards \t");
-      Serial.print(speed);
+      digitalWrite(BL_IN1, HIGH);
+      digitalWrite(BL_IN2, LOW);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
 
@@ -152,45 +181,54 @@ void move(int y, int x) {
   if (y > (NEUTRALPOINT + (DEADSPOT / 2)) && NEUTRALPOINT - (x > NEUTRALPOINT + (DEADSPOT / 2))) {
 // Go forwards, arcing right
 // To arc right, left wheel goes at max speed and right wheel goes at a percentage of max speed depending on how hard the turn is 
-      int speed = (y - NEUTRALPOINT);
-      float scalar = (1 - ((x - NEUTRALPOINT) / NEUTRALPOINT));
+      float position = (y - NEUTRALPOINT);
+      int speed = (position * 255.0) / NEUTRALPOINT;
+      float np = NEUTRALPOINT;
+      float scalar = (1 - ((x - np) / np));
       speed = (speed * scalar);
 
       digitalWrite(FR_IN1, HIGH);
       digitalWrite(FR_IN2, LOW);
       analogWrite(FR_PWM, speed);
+     
+      digitalWrite(BR_IN1, HIGH);
+      digitalWrite(BR_IN2, LOW);
+      analogWrite(BR_PWM, speed);
 
-      Serial.print("\n Right forwards \t");
-      Serial.print(speed);
-      
-      speed = (y - NEUTRALPOINT);
+      speed = (position * 255.0) / NEUTRALPOINT;
       digitalWrite(FL_IN1, HIGH);
       digitalWrite(FL_IN2, LOW);
       analogWrite(FL_PWM, speed);
       
-      Serial.print("\n Left forwards \t");
-      Serial.print(speed);
+      digitalWrite(BL_IN1, HIGH);
+      digitalWrite(BL_IN2, LOW);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
 
 
 // if left stick is reverse and right stick is within DEADSPOT:
-  if (y < NEUTRALPOINT - (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x <= NEUTRALPOINT + (DEADSPOT / 2))) {
+  if (y < NEUTRALPOINT - (DEADSPOT / 2) && (NEUTRALPOINT - (DEADSPOT / 2) <= x && x <= NEUTRALPOINT + (DEADSPOT / 2))) {
 // Reverse dead straight with both motors
-      int speed = (NEUTRALPOINT - y);
+      float position = (NEUTRALPOINT - y);
+      int speed = (position * 255.0) / NEUTRALPOINT;
       digitalWrite(FR_IN1, LOW);
       digitalWrite(FR_IN2, HIGH);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right reverse \t");
-      Serial.print(speed);
-      
       digitalWrite(FL_IN1, LOW);
       digitalWrite(FL_IN2, HIGH);
       analogWrite(FL_PWM, speed);
 
-      Serial.print("\n Left reverse \t");
-      Serial.print(speed);
+      digitalWrite(BR_IN1, LOW);
+      digitalWrite(BR_IN2, HIGH);
+      analogWrite(BR_PWM, speed);
+
+      digitalWrite(BL_IN1, LOW);
+      digitalWrite(BL_IN2, HIGH);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
 
@@ -199,23 +237,28 @@ void move(int y, int x) {
   if (y < (NEUTRALPOINT - (DEADSPOT / 2)) && x < (NEUTRALPOINT - (DEADSPOT / 2))) {
 // Reverse while arcing left
 // To arc left, right wheel goes at max speed and left wheel goes at a percentage of max speed depending on how hard the turn is 
-      int speed = (y - NEUTRALPOINT);
-      float scalar = (x / NEUTRALPOINT);
+      float position = (NEUTRALPOINT - y);
+      int speed = (position * 255.0) / NEUTRALPOINT;
+      float np = NEUTRALPOINT;
+      float scalar = (x / np);
 
       digitalWrite(FR_IN1, LOW);
       digitalWrite(FR_IN2, HIGH);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right reverse \t");
-      Serial.print(speed);
-      
+      digitalWrite(BR_IN1, LOW);
+      digitalWrite(BR_IN2, HIGH);
+      analogWrite(BR_PWM, speed);
+
       speed = (speed * scalar);
       digitalWrite(FL_IN1, LOW);
       digitalWrite(FL_IN2, HIGH);
       analogWrite(FL_PWM, speed);
 
-      Serial.print("\n Left reverse \t");
-      Serial.print(speed);
+      digitalWrite(BL_IN1, LOW);
+      digitalWrite(BL_IN2, HIGH);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
 
@@ -224,24 +267,29 @@ void move(int y, int x) {
   if (y < (NEUTRALPOINT - (DEADSPOT / 2)) && x > (NEUTRALPOINT + (DEADSPOT / 2))) {
 // Reverse while arcing right
 // To arc right, left wheel goes at max speed and right wheel goes at a percentage of max speed depending on how hard the turn is 
-      int speed = (y - NEUTRALPOINT);
-      float scalar = (1 - ((x - NEUTRALPOINT) / NEUTRALPOINT));
+      float position = (NEUTRALPOINT - y);
+      int speed = (position * 255.0) / NEUTRALPOINT;
+      float np = NEUTRALPOINT;
+      float scalar = (1 - ((x - np) / np));
       speed = (speed * scalar);
 
       digitalWrite(FR_IN1, LOW);
       digitalWrite(FR_IN2, HIGH);
       analogWrite(FR_PWM, speed);
 
-      Serial.print("\n Right reverse \t");
-      Serial.print(speed);
-      
-      speed = (y - NEUTRALPOINT);
+      digitalWrite(BR_IN1, LOW);
+      digitalWrite(BR_IN2, HIGH);
+      analogWrite(BR_PWM, speed);
+
+      speed = (position * 255.0) / NEUTRALPOINT;
       digitalWrite(FL_IN1, LOW);
       digitalWrite(FL_IN2, HIGH);
       analogWrite(FL_PWM, speed);
 
-      Serial.print("\n Left reverse \t");
-      Serial.print(speed);
+      digitalWrite(BL_IN1, LOW);
+      digitalWrite(BL_IN2, HIGH);
+      analogWrite(BL_PWM, speed);
+
       return 0;
   }
 }
@@ -252,19 +300,5 @@ void loop() {
   // put your main code here, to run repeatedly:
 
 // *** insert function to calculate x and y values from receiver signals here***  
-  Serial.print("\n \n Neutral");
   move(255, 255);
-  
-  Serial.print("\n \n Straight Reverse");
-  move(0, 255);
-
-  Serial.print("\n \n Straight Accel");
-  move(511, 255);
-
-  Serial.print("\n \n Left on spot");
-  move(255, 0);
-
-  Serial.print("\n \n Right on spot");
-  move(255, 511);
-
 }
